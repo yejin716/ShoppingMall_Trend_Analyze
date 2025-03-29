@@ -21,7 +21,7 @@ chrome_options.add_argument("--lang=ko-KR")  # 한국어 언어로 설정
 chrome_options.add_argument("--no-sandbox")  # 보안 모드 비활성화
 chrome_options.add_argument("--disable-dev-shm-usage")  # 메모리 관련 이슈 방지
 
-url = 'https://zigzag.kr/categories/-1?title=%EC%9D%98%EB%A5%98&category_id=-1&middle_category_id=547&sort=200'
+url = 'https://zigzag.kr/categories/623?title=%EA%B0%80%EB%B0%A9%20%EC%A0%84%EC%B2%B4&category_id=623&middle_category_id=623&sort=200'
 # WebDriver 경로 지정
 driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
 driver.get(url)
@@ -45,7 +45,7 @@ for _ in range(scrolls):
     for link in links:
         product_url = link.get('href')
         if product_url and product_url.startswith('/catalog/products/'):
-            collected_links.add(f'https://zigzag.kr{product_url}')  # 중복 제거 위해 set에 추가
+            collected_links.add(f'https://zigzag.kr{product_url}?tab=review')  # 신발, 가방일시 ?tab=review 붙이기 
 
 # 최종 수집된 링크 확인
 print(f"총 {len(collected_links)}개의 상품 링크를 수집했습니다.")
@@ -54,7 +54,7 @@ print(f"총 {len(collected_links)}개의 상품 링크를 수집했습니다.")
 data = []
 
 # 이미 저장된 CSV 파일 경로
-csv_file = r'D:\0_Yebang\취업\포트폴리오\개인프로젝트\Shopping_mall_analyze\data\pants_info_reviews.csv'
+csv_file = r'D:\0_Yebang\취업\포트폴리오\개인프로젝트\Shopping_mall_analyze\data\bag_info_reviews.csv'
 
 # 기존 CSV 파일이 있으면 데이터 불러오기 (오류가 난 부분부터 크롤링을 재개하기 위함)
 if os.path.exists(csv_file):
@@ -66,26 +66,45 @@ if os.path.exists(csv_file):
 
 # 상품 상세 정보 크롤링
 for idx, full_url in enumerate(list(collected_links)):  # 모든 상품 링크를 크롤링
+    
     try:
         driver.get(full_url)
         time.sleep(2)
         item_page = BeautifulSoup(driver.page_source, 'html.parser')
 
-        brand_name = item_page.select_one('.css-gwr30y').text.strip()
-        item_name = item_page.select_one('h1.css-1n8byw.e14n6e5u1').text.strip()
-        origin_price = item_page.select_one('.css-14j45be.e1yx2lle2').text.strip()
-        discount_price = item_page.select_one('.css-no59fe.e1ovj4ty1').text.strip()
-        review_count = item_page.select_one('span.css-1ovjo5n').text.strip()
-        item_score_avg = item_page.select_one('.css-1hld56p.e71452m2').text.strip()
-        brand_keyword = [span.text for span in item_page.select("#__next > div.zds-themes.light-theme > div.css-xrh5h3.edi339y0 > div > div.shop_row > div > div > div > div > div:nth-child(2) > div.css-2jjng0.eq4fxvi7 span")]
-
+        # brand_name = item_page.select_one('.css-gwr30y').text.strip()
+        # item_name = item_page.select_one('h1.css-1n8byw.e14n6e5u1').text.strip()
+        # origin_price = item_page.select_one('.css-14j45be.e1yx2lle2').text.strip()
+        # discount_price = item_page.select_one('.css-no59fe.e1ovj4ty1').text.strip()
+        # review_count = item_page.select_one('span.css-1ovjo5n').text.strip()
+        # item_score_avg = item_page.select_one('.css-1hld56p.e71452m2').text.strip()
+        # brand_keyword = [span.text for span in item_page.select("#__next > div.zds-themes.light-theme > div.css-xrh5h3.edi339y0 > div > div.shop_row > div > div > div > div > div:nth-child(2) > div.css-2jjng0.eq4fxvi7 span")]
+        
+        # print(brand_name, item_name, origin_price, discount_price, review_count, item_score_avg, brand_keyword, full_url)
+        
+        #가방, 신발 
+        brand_name = driver.find_element(By.CSS_SELECTOR, '.css-gwr30y').text.strip()
+        item_name = driver.find_element(By.CSS_SELECTOR, "h1.css-1n8byw.e14n6e5u1").text.strip()
+        origin_price = driver.find_element(By.CSS_SELECTOR, ".css-14j45be.e1yx2lle2").text.strip()
+        discount_price = driver.find_element(By.CSS_SELECTOR, ".css-no59fe.e1ovj4ty1").text.strip()
+        review_count = driver.find_element(By.CSS_SELECTOR, "span.css-1ovjo5n.e4stbpt2").text.strip()
+        # 평균 평점
+        item_score_avg = driver.find_element(By.CSS_SELECTOR, "span.css-1eso3qr.e107eqcl2").text.strip()
+        # 브랜드 키워드
+        brand_keyword_elements = driver.find_elements(
+            By.CSS_SELECTOR, "#__next > div.zds-themes.light-theme > div.css-xrh5h3.edi339y0 > div > div.shop_row > div > div > div > div > div:nth-child(2) > div.css-2jjng0.eq4fxvi7 span"
+        )
+        brand_keyword = [element.text for element in brand_keyword_elements]
+        
+        print(brand_name, item_name, origin_price, discount_price, review_count, item_score_avg, brand_keyword, full_url)
+        
         # 리뷰 페이지 들어가기 
         product_id = full_url.split("/")[-1]
         review_link = f"https://zigzag.kr/review/list/{product_id}"
         driver.get(review_link)
         time.sleep(2)
 
-        # 스크롤 다운 (3번)
+        # 스크롤 다운 (3번)css-1hld56pcss-1hld56p.e71452m2
         for _ in range(5):
             driver.execute_script('window.scrollTo(0,document.body.scrollHeight);')
             time.sleep(2) 
